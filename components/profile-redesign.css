@@ -1,0 +1,32 @@
+/* Gema Brillante — distribución de perfiles 15.3.4 */
+.profile-icon-action {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:36px; height:36px; border-radius:10px;
+  background:var(--surface); color:var(--foreground);
+  border:1px solid var(--border); box-shadow:0 2px 8px #0002;
+}
+.profile-icon-action:hover, .profile-tab-button:hover { background:var(--lavender); }
+.profile-icon-action:focus-visible, .profile-tab-button:focus-visible { outline:2px solid var(--gold); outline-offset:2px; }
+.profile-tabs-bar { display:flex; flex-wrap:wrap; align-items:center; gap:6px; padding:8px; background:var(--surface); border:1px solid var(--border); border-radius:14px; }
+.profile-tab-button { display:inline-flex; align-items:center; gap:6px; padding:8px 11px; border:1px solid transparent; border-radius:9px; color:var(--foreground); font-size:13px; cursor:pointer; }
+.profile-tab-button[aria-pressed="true"] { background:var(--lavender); border-color:var(--gold); font-weight:600; }
+.profile-content-layout { display:grid; gap:18px; align-items:start; grid-template-columns:minmax(0,1fr); }
+@media (min-width:1200px) { .profile-content-layout { grid-template-columns:minmax(270px,1fr) minmax(0,2fr); } }
+.profile-music-compact { min-width:0; }
+.profile-music-compact header h2 { font-size:1.25rem; line-height:1.25; overflow-wrap:anywhere; }
+.profile-music-compact .personal-music-player { padding:10px; border-radius:13px; }
+.profile-music-compact .personal-music-player > * + * { margin-top:9px; }
+.profile-music-compact .music-artwork { width:92px; height:92px; }
+.profile-music-compact [data-player="vinyl"] .music-artwork-inner { width:39px; height:39px; }
+.profile-music-compact [data-player="vinyl"] .music-artwork-inner svg { width:24px; height:24px; }
+.profile-music-compact [data-player="cassette"] .music-artwork { width:min(145px,100%); height:87px; padding:7px; }
+.profile-music-compact [data-player="cassette"] .music-artwork-inner { height:38px; margin-top:-16px; }
+.profile-music-compact [data-player="cassette"] .music-artwork::after { bottom:6px; font-size:9px; padding:2px 0; letter-spacing:0; }
+.profile-music-compact .music-artwork-inner svg { max-width:30px; }
+.profile-music-compact .personal-music-player h3 { font-size:1.15rem; line-height:1.25; }
+.profile-music-compact .music-play-button { width:38px; height:38px; flex-shrink:0; }
+.profile-music-compact .music-play-button svg { width:17px; height:17px; }
+.profile-music-compact .music-track { padding:8px; gap:7px; }
+.profile-music-compact .youtube-container { min-width:200px; }
+.profile-music-compact .youtube-container iframe { min-height:200px; height:200px; width:100%; }
+.profile-music-compact audio { max-width:100%; }
