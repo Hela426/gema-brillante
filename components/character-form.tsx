@@ -2,7 +2,8 @@
 
 import { useState, type FormEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
-import CharacterImage from "@/components/character-image";
+import CharacterImageEditor from "@/components/character-image-editor";
+import { frameSuffix, imageExtension, imageTypeFromPath, validateImage, type ImageDraft } from "@/lib/image-framing";
 import {
   characterRoles,
   familyBackgrounds,
@@ -17,7 +18,6 @@ import {
   BookOpen,
   Sparkles,
   Palette,
-  ImagePlus,
 } from "lucide-react";
 
 type Props = {
@@ -51,8 +51,8 @@ export default function CharacterForm({
     theme_color: safeColor(character?.theme_color),
   });
 
-  const [avatar, setAvatar] = useState<File | null>(null);
-  const [cover, setCover] = useState<File | null>(null);
+  const [avatar, setAvatar] = useState<ImageDraft | null>(null);
+  const [cover, setCover] = useState<ImageDraft | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -111,51 +111,29 @@ export default function CharacterForm({
         return;
       }
 
-      async function upload(file: File | null, kind: string) {
-        if (!file) return null;
-
-        if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-          throw new Error("Solo puedes subir imágenes JPG, PNG o WEBP.");
-        }
-
-        if (file.size > 5 * 1024 * 1024) {
-          throw new Error("La imagen no puede superar los 5 MB.");
-        }
-
-        const extension =
-          file.type === "image/png"
-            ? "png"
-            : file.type === "image/webp"
-              ? "webp"
-              : "jpg";
-
+      async function upload(draft: ImageDraft | null, kind: "avatar" | "cover") {
+        if (!draft) return null;
         const owner = character?.owner_id || user!.id;
-
-        // Las imágenes de otros usuarios las administra
-        // su propietario desde su propia cuenta.
-
         if (owner !== user!.id) {
-          throw new Error("Solo el propietario puede subir imágenes.");
+          throw new Error("Solo el propietario puede subir o reajustar imágenes.");
         }
-
-        const path = `${owner}/${kind}-${crypto.randomUUID()}.${extension}`;
-
-        const { error } = await supabase.storage
-          .from("character-images")
-          .upload(path, file, {
-            upsert: false,
-            contentType: file.type,
-            cacheControl: "3600",
-          });
-
-        if (error) {
-          console.error("Error de Storage:", error);
-
-          throw new Error(
-            `No se pudo subir la imagen (${kind}): ${error.message}`,
-          );
+        let file: Blob;
+        if (draft.file) {
+          file = draft.file;
+        } else {
+          const oldPath = kind === "avatar" ? character?.avatar_url : character?.cover_url;
+          if (!oldPath) throw new Error("No se encuentra la imagen original.");
+          const { data, error } = await supabase.storage.from("character-images").download(oldPath);
+          if (error || !data) throw new Error(`No se pudo recuperar la imagen original (${kind}).`);
+          file = data.type && data.type !== "application/octet-stream" ? data : new Blob([data], { type: imageTypeFromPath(oldPath) });
         }
-
+        validateImage(file);
+        const extension = imageExtension(file.type);
+        const path = `${owner}/${kind}-${crypto.randomUUID()}${frameSuffix(draft.frame)}.${extension}`;
+        const { error } = await supabase.storage.from("character-images").upload(path, file, {
+          upsert: false, contentType: file.type, cacheControl: "3600",
+        });
+        if (error) throw new Error(`No se pudo subir la imagen (${kind}): ${error.message}`);
         return path;
       }
 
@@ -215,43 +193,10 @@ export default function CharacterForm({
       <fieldset disabled={loading} className="space-y-6">
         {/* IMÁGENES */}
 
-        <section className="academy-card overflow-hidden">
-          <CharacterImage
-            path={character?.cover_url}
-            kind="cover"
-            className="h-56"
-          />
-
-          <div className="p-6 space-y-5">
-            <label className="block text-sm">
-              <span className="flex items-center gap-2">
-                <ImagePlus size={18} />
-                Imagen de portada
-              </span>
-
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="academy-input text-xs"
-                onChange={(e) => setCover(e.target.files?.[0] || null)}
-              />
-            </label>
-
-            <CharacterImage
-              path={character?.avatar_url}
-              className="w-28 h-28 rounded-full
-                border-2 border-(--gold)"
-            />
-
-            <label className="block text-sm">
-              Retrato del personaje
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="academy-input text-xs"
-                onChange={(e) => setAvatar(e.target.files?.[0] || null)}
-              />
-            </label>
+        <section className="academy-card overflow-hidden p-6 space-y-6">
+          <CharacterImageEditor kind="cover" path={character?.cover_url} draft={cover} onChange={setCover} />
+          <div className="border-t border-(--border) pt-5">
+            <CharacterImageEditor kind="avatar" path={character?.avatar_url} draft={avatar} onChange={setAvatar} />
           </div>
         </section>
 
