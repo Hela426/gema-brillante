@@ -24,10 +24,16 @@ async function SettingsPage({ params }: Props) {
   if (error) throw new Error(error.message);
   if (!data) notFound();
   const person = data as Character;
+  // Se consulta el personaje visitado, no el rango del visitante.
+  const { data: rectoryFlag, error: rectoryError } = await supabase.rpc(
+    "is_rectory_character", { p_character: person.id },
+  );
+  if (rectoryError) throw new Error(rectoryError.message);
+  const isRectory = rectoryFlag === true;
   if (person.owner_id !== user.id && profile.role !== "master") redirect(`/personajes/${id}`);
 
   const [customization, personality, music, tracks] = await Promise.all([
-    supabase.from("character_customizations").select("theme, avatar_frame, decoration, card_style, background_pattern, accent_color, subtitle, welcome_message, flower, ambient_effect, effect_density").eq("character_id", id).maybeSingle(),
+    supabase.from("character_customizations").select("theme, avatar_frame, decoration, card_style, background_pattern, accent_color, subtitle, welcome_message, flower, ambient_effect, effect_density, night_theme, night_accent_color").eq("character_id", id).maybeSingle(),
     supabase.rpc("get_character_personality", { p_character: id }),
     supabase.from("character_music").select("playlist_name, player_style, visible").eq("character_id", id).maybeSingle(),
     supabase.from("character_tracks").select("*").eq("character_id", id).order("position", { ascending: true }),
@@ -44,7 +50,7 @@ async function SettingsPage({ params }: Props) {
         <p className="text-sm text-(--muted)">{person.name} · Edita cada sección y guarda sus cambios por separado.</p>
       </header>
       <ProfileSettingsTabs key={id}
-        identity={<CharacterForm character={person} returnToSettings />}
+        identity={<CharacterForm character={person} returnToSettings isRectory={isRectory} />}
         appearance={<ProfileCustomizer character={person} initialSettings={settings} embedded />}
         personality={<PersonalProfile settings={settings} characterId={id} preview introPlacement="inline"><PersonalityWidgets characterId={id} initialPersonality={personality.data as Personality | null} canEdit /></PersonalProfile>}
         music={<PersonalProfile settings={settings} characterId={id} preview introPlacement="inline"><MusicPlayer characterId={id} settings={music.data as MusicSettings | null} tracks={(tracks.data || []) as MusicTrack[]} canEdit /></PersonalProfile>}

@@ -10,6 +10,9 @@ import PersonalProfile from "@/components/personal-profile";
 
 import {
   profileThemes,
+  nightProfileThemes,
+  resolveNightTheme,
+  type NightProfileTheme,
   avatarFrames,
   profileDecorations,
   backgroundPatterns,
@@ -45,7 +48,11 @@ export default function ProfileCustomizer({
 }) {
   const router = useRouter();
 
-  const [settings, setSettings] = useState<Customization>(initialSettings);
+  const [settings, setSettings] = useState<Customization>(() => ({
+    ...defaultCustomization,
+    ...initialSettings,
+  }));
+  const nightTheme = resolveNightTheme(settings);
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -140,65 +147,77 @@ export default function ProfileCustomizer({
           </h2>
 
           <fieldset disabled={busy} className="space-y-5">
-            <div className="space-y-3">
-              <h3 className="text-lg">Tema del perfil</h3>
-
-              <div className="grid grid-cols-2 gap-3">
-                {Object.entries(profileThemes).map(([id, theme]) => (
-                  <button
-                    key={id}
-                    type="button"
-                    aria-pressed={settings.theme === id}
-                    className="profile-theme-option p-2"
-                    onClick={() =>
-                      change("theme", id as Customization["theme"])
-                    }
-                  >
-                    <div className="flex gap-1 h-12">
-                      {[theme.background, theme.surface, theme.accent].map(
-                        (color, index) => (
-                          <div
-                            key={index}
-                            className="flex-1 rounded-md"
-                            style={{ background: color }}
-                          />
-                        ),
-                      )}
-                    </div>
-
-                    <p className="text-xs mt-2">{theme.label}</p>
-                  </button>
-                ))}
+            <div className="profile-palette-day space-y-4">
+              <div className="space-y-3">
+                <h3 className="text-lg">☀ Tema diurno</h3>
+                <p className="text-xs text-(--muted)">Elige los colores de tu perfil durante el día. Cambia el tema general de la academia para editar los colores nocturnos.</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {Object.entries(profileThemes).map(([id, theme]) => (
+                    <button key={id} type="button"
+                      aria-pressed={settings.theme === id}
+                      className="profile-theme-option p-2"
+                      onClick={() => change("theme", id as Customization["theme"])}>
+                      <div className="flex gap-1 h-12">
+                        {[theme.background, theme.surface, theme.accent].map((color, index) => (
+                          <div key={index} className="flex-1 rounded-md" style={{ background: color }} />
+                        ))}
+                      </div>
+                      <p className="text-xs mt-2">{theme.label}</p>
+                    </button>
+                  ))}
+                </div>
               </div>
+              <label className="block text-sm">
+                Color decorativo diurno
+                <div className="flex flex-wrap items-center gap-3 mt-3">
+                  <input type="color" className="w-12 h-12 cursor-pointer"
+                    value={settings.accent_color || profileThemes[settings.theme].accent}
+                    onChange={(e) => change("accent_color", e.target.value)} />
+                  <span className="text-sm">{settings.accent_color || profileThemes[settings.theme].accent}</span>
+                  <button type="button" className="text-xs text-(--accent)"
+                    onClick={() => change("accent_color", null)}>Usar color del tema</button>
+                </div>
+              </label>
             </div>
 
-            <label className="block text-sm">
-              Color decorativo personalizado
-              <div className="flex items-center gap-3 mt-3">
-                <input
-                  type="color"
-                  className="w-12 h-12 cursor-pointer"
-                  value={
-                    settings.accent_color ||
-                    profileThemes[settings.theme].accent
-                  }
-                  onChange={(e) => change("accent_color", e.target.value)}
-                />
-
-                <span className="text-sm">
-                  {settings.accent_color ||
-                    profileThemes[settings.theme].accent}
-                </span>
-
-                <button
-                  type="button"
-                  className="text-xs text-(--accent)"
-                  onClick={() => change("accent_color", null)}
-                >
-                  Usar color del tema
+            <div className="profile-palette-night space-y-4">
+              <div className="space-y-3">
+                <h3 className="text-lg">☾ Tema nocturno</h3>
+                <p className="text-xs text-(--muted)">Tu perfil se adapta al modo de quien lo visita. La elección nocturna no modifica el tema diurno.</p>
+                <button type="button" className="profile-theme-option w-full p-3 text-left"
+                  aria-pressed={!settings.night_theme}
+                  onClick={() => change("night_theme", null)}>
+                  <span className="block text-sm">✧ Automático · Variante de mi tema diurno</span>
+                  <span className="block text-xs text-(--muted) mt-1">{nightProfileThemes[resolveNightTheme({ theme: settings.theme, night_theme: null })].label}</span>
                 </button>
+                <div className="grid grid-cols-2 gap-3">
+                  {Object.entries(nightProfileThemes).map(([id, theme]) => (
+                    <button key={id} type="button"
+                      aria-pressed={settings.night_theme === id}
+                      className="profile-theme-option p-2"
+                      onClick={() => change("night_theme", id as NightProfileTheme)}>
+                      <div className="flex gap-1 h-12">
+                        {[theme.background, theme.surface, theme.accent].map((color, index) => (
+                          <div key={index} className="flex-1 rounded-md" style={{ background: color }} />
+                        ))}
+                      </div>
+                      <p className="text-xs mt-2">{theme.label}</p>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </label>
+              <label className="block text-sm">
+                Color decorativo nocturno
+                <div className="flex flex-wrap items-center gap-3 mt-3">
+                  <input type="color" className="w-12 h-12 cursor-pointer"
+                    value={settings.night_accent_color || nightProfileThemes[nightTheme].accent}
+                    onChange={(e) => change("night_accent_color", e.target.value)} />
+                  <span className="text-sm">{settings.night_accent_color || nightProfileThemes[nightTheme].accent}</span>
+                  <button type="button" className="text-xs text-(--accent)"
+                    onClick={() => change("night_accent_color", null)}>Usar color del tema</button>
+                </div>
+              </label>
+            </div>
 
             <div className="space-y-4">
               <h3 className="text-2xl">Mi jardín personal</h3>
@@ -404,7 +423,7 @@ export default function ProfileCustomizer({
                 text-sm text-(--accent)"
             >
               <RotateCcw size={17} />
-              Restaurar diseño original
+              Restaurar diseño original (día y noche)
             </button>
 
             <button

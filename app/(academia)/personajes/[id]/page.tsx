@@ -58,6 +58,12 @@ async function CharacterProfile({ params }: Props) {
   if (!data) notFound();
 
   const person = data as Character;
+  // Se consulta el personaje visitado, no el rango del visitante.
+  const { data: rectoryFlag, error: rectoryError } = await supabase.rpc(
+    "is_rectory_character", { p_character: person.id },
+  );
+  if (rectoryError) throw new Error(rectoryError.message);
+  const isRectory = rectoryFlag === true;
 
   const canEdit = person.owner_id === user.id || profile.role === "master";
 
@@ -150,7 +156,7 @@ async function CharacterProfile({ params }: Props) {
         welcome_message,
         flower,
         ambient_effect,
-        effect_density
+        effect_density, night_theme, night_accent_color
       `,
     )
     .eq("character_id", person.id)
@@ -260,7 +266,7 @@ async function CharacterProfile({ params }: Props) {
                   </p>
 
                   <p className="text-xs text-(--muted) mt-2">
-                    {person.character_type === "main"
+                    {isRectory ? "♛ Rectoría · Academia Gema Brillante" : person.character_type === "main"
                       ? "Personaje principal"
                       : "NPC"}
                   </p>
@@ -316,7 +322,20 @@ async function CharacterProfile({ params }: Props) {
                 canEdit={canEdit}
               />
 
-              <section className="academy-card p-6">
+              {isRectory ? (
+                <section className="academy-card p-6 space-y-4">
+                  <h2 className="text-3xl flex items-center gap-2">
+                    <BookOpen size={22} className="text-(--gold)" />
+                    Historia de la academia
+                  </h2>
+                  <div className="floral-divider">❀</div>
+                  <p className="text-sm leading-7 whitespace-pre-wrap wrap-break-word">
+                    {person.biography || "La historia de Gema Brillante está por escribirse."}
+                  </p>
+                  {canEdit && <Link href={`/personajes/${id}/configurar`} className="text-xs text-(--accent) underline">Editar historia</Link>}
+                </section>
+              ) : (<>
+                <section className="academy-card p-6">
                 <h2 className="text-3xl">Sobre mí</h2>
 
                 <div className="floral-divider my-5">❀</div>
@@ -369,6 +388,7 @@ async function CharacterProfile({ params }: Props) {
                     </p>
                   )}
               </section>
+              </>)}
 
               <section
                 className="bg-(--ivory)
@@ -402,10 +422,10 @@ async function CharacterProfile({ params }: Props) {
                   <ProfileComposer key={person.id} characterId={person.id} name={person.name} avatar={person.avatar_url} />
                 )}
                 <div className="academy-card p-5">
-                  <h2 className="text-3xl">Publicaciones</h2>
+                  <h2 className="text-3xl">{isRectory ? "Comunicados de Rectoría" : "Publicaciones"}</h2>
 
                   <p className="text-xs text-(--muted) mt-3">
-                    Los pensamientos y momentos compartidos por este personaje.
+                    {isRectory ? "Noticias y comunicados oficiales de la academia." : "Los pensamientos y momentos compartidos por este personaje."}
                   </p>
                 </div>
 
@@ -417,7 +437,7 @@ async function CharacterProfile({ params }: Props) {
               <article className="academy-card p-6">
                 <h2 className="text-3xl flex items-center gap-3">
                   <BookOpen size={23} className="text-(--gold)" />
-                  Mi historia
+                  {isRectory ? "Historia de la academia" : "Mi historia"}
                 </h2>
 
                 <p

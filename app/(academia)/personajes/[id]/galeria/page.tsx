@@ -65,7 +65,7 @@ async function GalleryPage({ params }: Props) {
           welcome_message,
           flower,
           ambient_effect,
-          effect_density
+          effect_density, night_theme, night_accent_color
         `,
       )
       .eq("character_id", id)

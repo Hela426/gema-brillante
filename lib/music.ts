@@ -17,6 +17,7 @@ export type MusicTrack = {
   artist: string;
   source_type: "youtube" | "mp3";
   source: string;
+  audio_path?: string | null;
   cover_url: string;
   position: number;
   created_at: string;
@@ -98,4 +99,12 @@ export function mp3Url(value: string) {
     !url.hash
       ? safe
       : null;
+}
+export const musicAudioBucket = "character-audio";
+export const musicAudioMaxBytes = 10 * 1024 * 1024;
+export function validateMusicFile(file: File) {
+  if (!/\.mp3$/i.test(file.name) || (file.type && !["audio/mpeg", "audio/mp3", "application/octet-stream"].includes(file.type))) {
+    throw new Error("Selecciona un archivo MP3 válido.");
+  }
+  if (!file.size || file.size > musicAudioMaxBytes) throw new Error("El MP3 debe pesar entre 1 byte y 10 MB.");
 }

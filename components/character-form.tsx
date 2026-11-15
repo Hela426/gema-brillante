@@ -24,12 +24,14 @@ type Props = {
   character?: Character;
   characterType?: "main" | "npc";
   returnToSettings?: boolean;
+  isRectory?: boolean;
 };
 
 export default function CharacterForm({
   character,
   characterType = "main",
   returnToSettings = false,
+  isRectory = false,
 }: Props) {
   const [form, setForm] = useState({
     name: character?.name || "",
@@ -267,7 +269,7 @@ export default function CharacterForm({
         <section className="academy-card p-6">
           <h2 className="text-3xl flex items-center gap-3">
             <BookOpen size={23} className="text-(--gold)" />
-            Historia pública
+            {isRectory ? "Historia de la academia" : "Historia pública"}
           </h2>
 
           <p className="text-xs text-(--muted) mt-3">
@@ -278,7 +280,7 @@ export default function CharacterForm({
           <div className="space-y-5 mt-6">
             {area("appearance", "Apariencia")}
             {area("temperament", "Personalidad")}
-            {area("biography", "Biografía pública")}
+            {area("biography", isRectory ? "Historia de Gema Brillante" : "Biografía pública")}
           </div>
         </section>
 

@@ -6,6 +6,8 @@ import { profileFlowers } from "@/lib/flowers";
 
 import {
   profileThemes,
+  nightProfileThemes,
+  resolveNightTheme,
   profileDecorations,
   type Customization,
 } from "@/lib/customization";
@@ -27,27 +29,42 @@ export default function PersonalProfile({
   hideActions?: boolean;
   introPlacement?: "end" | "inline";
 }) {
-  const theme = profileThemes[settings.theme];
-
+  const day = profileThemes[settings.theme] || profileThemes.orchid;
+  const night = nightProfileThemes[resolveNightTheme(settings)];
   const flower = profileFlowers[settings.flower] || profileFlowers.orchid;
 
-  const accent = settings.accent_color || theme.accent;
+  // Supply both palettes on the server. CSS reacts to html.dark without a
+  // client fetch, hydration mismatch, remount or restarting the music player.
+  function paletteVariables(
+    mode: "day" | "night",
+    theme: typeof day | typeof night,
+    customAccent: string | null | undefined,
+  ) {
+    const values = {
+      background: theme.background,
+      foreground: theme.text,
+      surface: theme.surface,
+      card: theme.surface,
+      muted: theme.muted,
+      heading: theme.text,
+      border: theme.border,
+      lavender: theme.lavender,
+      pink: theme.pink,
+      sage: theme.sage,
+      ivory: theme.background,
+      gold: theme.accent,
+      accent: theme.muted,
+      "profile-accent": customAccent || theme.accent,
+    };
+    return Object.fromEntries(Object.entries(values).map(([key, value]) =>
+      [`--gb-${mode}-${key}`, value],
+    ));
+  }
 
   const styles = {
-    "--background": theme.background,
-    "--foreground": theme.text,
-    "--surface": theme.surface,
-    "--card": theme.surface,
-    "--muted": theme.muted,
-    "--heading": theme.text,
-    "--border": theme.border,
-    "--lavender": theme.lavender,
-    "--pink": theme.pink,
-    "--sage": theme.sage,
-    "--ivory": theme.background,
-    "--gold": theme.accent,
-    "--accent": theme.muted,
-    "--profile-accent": accent,
+    ...paletteVariables("day", day, settings.accent_color),
+    ...paletteVariables("night", night, settings.night_accent_color),
+    "--gb-day-scheme": settings.theme === "midnight" ? "dark" : "light",
     "--profile-radius": settings.card_style === "square" ? "5px" : "22px",
   } as CSSProperties;
 

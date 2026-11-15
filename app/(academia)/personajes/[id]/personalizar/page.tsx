@@ -56,7 +56,7 @@ async function CustomizePage({ params }: { params: Promise<{ id: string }> }) {
       welcome_message,
       flower,
       ambient_effect,
-      effect_density
+      effect_density, night_theme, night_accent_color
     `,
     )
     .eq("character_id", id)

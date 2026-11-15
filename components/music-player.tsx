@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import YouTubePlayer from "@/components/youtube-player";
+import AudioTrackPlayer from "@/components/audio-track-player";
 
 import {
   playerStyles,
@@ -11,6 +12,8 @@ import {
   youtubeId,
   safeHttps,
   mp3Url,
+  musicAudioBucket,
+  validateMusicFile,
   type MusicSettings,
   type MusicTrack,
 } from "@/lib/music";
@@ -25,6 +28,7 @@ import {
   SkipForward,
   Play,
   Square,
+  Upload,
   Settings2,
   X,
   Flower2,
@@ -67,7 +71,9 @@ export default function MusicPlayer({
   const [cover, setCover] = useState("");
   const [position, setPosition] = useState(1);
 
-  const [sourceType, setSourceType] = useState<"youtube" | "mp3">("youtube");
+  const [sourceType, setSourceType] = useState<"youtube" | "mp3" | "upload">("upload");
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [audioPath, setAudioPath] = useState<string | null>(null);
 
   const [deleting, setDeleting] = useState<MusicTrack | null>(null);
 
@@ -148,7 +154,9 @@ export default function MusicPlayer({
     setArtist("");
     setSource("");
     setCover("");
-    setSourceType("youtube");
+    setSourceType("upload");
+    setAudioFile(null);
+    setAudioPath(null);
 
     setPosition(
       ordered.length ? Math.max(...ordered.map((t) => t.position)) + 1 : 1,
@@ -160,12 +168,14 @@ export default function MusicPlayer({
 
   function editTrack(track: MusicTrack) {
     setEditingId(track.id);
-    setTitle(track.title);
-    setArtist(track.artist);
-    setSource(track.source);
-    setCover(track.cover_url);
-    setSourceType(track.source_type);
-    setPosition(track.position);
+    setTitle(track.title ?? "");
+    setArtist(track.artist ?? "");
+    setSource(track.source ?? "");
+    setCover(track.cover_url ?? "");
+    setSourceType(track.audio_path ? "upload" : track.source_type);
+    setAudioPath(track.audio_path || null);
+    setAudioFile(null);
+    setPosition(track.position ?? 1);
     setEditing(true);
     setError("");
   }
@@ -176,10 +186,12 @@ export default function MusicPlayer({
         throw new Error("Escribe el título de la canción.");
       }
 
-      const validSource =
-        sourceType === "youtube" ? youtubeId(source) : mp3Url(source);
-
-      if (!validSource) {
+      let validSource = sourceType === "youtube" ? youtubeId(source) : sourceType === "mp3" ? mp3Url(source) : null;
+      if (sourceType === "upload") {
+        if (!audioFile && !audioPath) throw new Error("Selecciona un archivo MP3.");
+        if (audioFile) validateMusicFile(audioFile);
+      }
+      if (sourceType !== "upload" && !validSource) {
         throw new Error(
           sourceType === "youtube"
             ? "Introduce un enlace válido de YouTube."
@@ -215,30 +227,45 @@ export default function MusicPlayer({
         throw new Error(playlist.error.message);
       }
 
-      const payload = {
-        title: title.trim(),
-        artist: artist.trim(),
-        source_type: sourceType,
-        source: validSource,
-        cover_url: validCover,
-        position,
-      };
-
-      const result = editingId
-        ? await supabase
-            .from("character_tracks")
-            .update(payload)
-            .eq("id", editingId)
-            .eq("character_id", characterId)
-        : await supabase.from("character_tracks").insert({
-            ...payload,
-            character_id: characterId,
-          });
-
-      if (result.error) {
-        throw new Error(result.error.message);
+      const previousPath = editingId ? tracks.find(t => t.id === editingId)?.audio_path : null;
+      let newPath: string | null = sourceType === "upload" ? audioPath : null;
+      let uploadedPath: string | null = null;
+      try {
+        if (sourceType === "upload") {
+          if (audioFile) {
+            const { data: { user }, error: userError } = await supabase.auth.getUser();
+            if (userError || !user) throw new Error("Inicia sesión de nuevo para subir música.");
+            const path = `${user.id}/${characterId}/${crypto.randomUUID()}.mp3`;
+            const { error: uploadError } = await supabase.storage.from(musicAudioBucket).upload(path, audioFile, { contentType: "audio/mpeg", upsert: false });
+            if (uploadError) throw new Error(uploadError.message);
+            uploadedPath = path;
+            newPath = path;
+          }
+          if (!newPath) throw new Error("No se encuentra el archivo MP3.");
+          // Referencia HTTPS compatible con la validación anterior. No hace público el bucket.
+          // La reproducción usa exclusivamente una URL firmada solicitada con la sesión actual.
+          validSource = supabase.storage.from(musicAudioBucket).getPublicUrl(newPath).data.publicUrl.replace("/object/public/", "/object/authenticated/");
+        }
+        if (!validSource) throw new Error("El origen de la canción no es válido.");
+        const payload = {
+          title: title.trim(), artist: artist.trim(),
+          source_type: sourceType === "youtube" ? "youtube" : "mp3",
+          source: validSource, audio_path: newPath, cover_url: validCover, position,
+        };
+        const result = editingId
+          ? await supabase.from("character_tracks").update(payload).eq("id", editingId).eq("character_id", characterId).select("id").single()
+          : await supabase.from("character_tracks").insert({ ...payload, character_id: characterId }).select("id").single();
+        if (result.error) throw new Error(result.error.message);
+      } catch (problem) {
+        // La política de borrado impide eliminar archivos que todavía estén referenciados.
+        if (uploadedPath) await supabase.storage.from(musicAudioBucket).remove([uploadedPath]);
+        throw problem;
       }
-
+      if (previousPath && previousPath !== newPath) {
+        const { error: cleanupError } = await supabase.storage.from(musicAudioBucket).remove([previousPath]);
+        if (cleanupError) console.warn("No se pudo retirar un archivo musical anterior.");
+      }
+      setAudioFile(null);
       setLoaded(false);
       setEditing(false);
     }, "Canción guardada correctamente.");
@@ -254,6 +281,10 @@ export default function MusicPlayer({
 
       if (error) throw new Error(error.message);
 
+      if (track.audio_path) {
+        const { error: cleanupError } = await createClient().storage.from(musicAudioBucket).remove([track.audio_path]);
+        if (cleanupError) console.warn("No se pudo retirar el archivo musical.");
+      }
       setDeleting(null);
 
       if (active?.id === track.id) {
@@ -469,21 +500,30 @@ export default function MusicPlayer({
               className="academy-input"
               value={sourceType}
               onChange={(e) => {
-                setSourceType(e.target.value as "youtube" | "mp3");
+                setSourceType(e.target.value as "youtube" | "mp3" | "upload");
                 setSource("");
+                setAudioFile(null);
               }}
             >
-              <option value="youtube">YouTube</option>
-              <option value="mp3">Archivo MP3 por URL</option>
+              <option value="upload">Subir archivo MP3 (solo audio)</option>
+              <option value="mp3">URL directa a MP3 (solo audio)</option>
+              <option value="youtube">YouTube (vídeo oficial)</option>
             </select>
           </label>
 
-          <label className="block text-sm">
+          {sourceType === "upload" ? (
+            <label key="source-upload" className="block text-sm space-y-2">
+              <span className="flex items-center gap-2"><Upload size={16}/> Archivo MP3</span>
+              <input key="audio-file" type="file" accept=".mp3,audio/mpeg,audio/mp3" className="academy-input text-xs" onChange={e => setAudioFile(e.target.files?.[0] || null)} />
+              <span className="block text-xs text-(--muted)">{audioFile ? audioFile.name : audioPath ? "Se conservará el archivo actual si no eliges otro." : "Máximo 10 MB. Usa únicamente música que tengas permiso de compartir."}</span>
+            </label>
+          ) : (
+            <label key={`source-link-${sourceType}`} className="block text-sm">
             Enlace de la canción
             <input
               className="academy-input"
               maxLength={2000}
-              value={source}
+              value={source ?? ""}
               onChange={(e) => setSource(e.target.value)}
               placeholder={
                 sourceType === "youtube"
@@ -492,6 +532,8 @@ export default function MusicPlayer({
               }
             />
           </label>
+          )}
+          {sourceType === "youtube" && <p className="text-xs text-(--muted)">YouTube requiere su vídeo oficial visible. Para escuchar sin vídeo, usa un archivo MP3 autorizado o una URL directa.</p>}
 
           <label className="block text-sm">
             Portada (opcional)
@@ -549,69 +591,21 @@ export default function MusicPlayer({
             </p>
           </div>
 
-          <div
-            className="flex items-center
-            justify-center gap-5"
-          >
-            <button aria-label="Canción anterior" onClick={() => skip(-1)}>
-              <SkipBack size={24} />
-            </button>
-
-            <button
-              aria-label={loaded ? "Cerrar reproducción" : "Abrir reproductor"}
-              onClick={() => setLoaded((old) => !old)}
-              className="music-play-button"
-            >
-              {loaded ? <Square size={22} /> : <Play size={22} />}
-            </button>
-
-            <button aria-label="Siguiente canción" onClick={() => skip(1)}>
-              <SkipForward size={24} />
-            </button>
-          </div>
-
-          <p
-            className="text-xs text-center
-            text-(--muted)"
-          >
-            {activeIndex + 1} de {ordered.length}
-          </p>
-
-          {loaded && playableSource && (
-            <div key={active.id} className="space-y-3">
-              {active.source_type === "youtube" ? (
-                <YouTubePlayer
-                  key={active.id}
-                  videoId={playableSource}
-                />
-              ) : (
-                <audio
-                  controls
-                  preload="none"
-                  src={playableSource}
-                  className="w-full"
-                />
-              )}
-
-              <p className="text-xs text-(--muted)">
-                Pulsa reproducir en el reproductor.
-              </p>
+          {active.source_type === "mp3" ? (
+            <AudioTrackPlayer key={`${active.id}-${active.audio_path || active.source}`} track={active} onPrevious={() => skip(-1)} onNext={() => skip(1)} />
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center justify-center gap-5">
+                <button type="button" aria-label="Canción anterior" onClick={() => skip(-1)}><SkipBack size={24}/></button>
+                <button type="button" title={loaded ? "Cerrar vídeo de YouTube" : "Ver vídeo de YouTube"} aria-label={loaded ? "Cerrar vídeo de YouTube" : "Ver vídeo de YouTube (no solo audio)"} onClick={() => setLoaded(old => !old)} className="music-play-button" disabled={!playableSource}>{loaded ? <Square size={20}/> : <Play size={22}/>}</button>
+                <button type="button" aria-label="Siguiente canción" onClick={() => skip(1)}><SkipForward size={24}/></button>
+              </div>
+              <p className="text-xs text-center text-(--muted)">{loaded ? "Reproduce desde el vídeo oficial." : "YouTube · vídeo opcional. Para solo audio, selecciona una pista MP3."}</p>
+              {loaded && playableSource && <YouTubePlayer key={active.id} videoId={playableSource}/>}
+              {!loaded && playableSource && <a href={`https://www.youtube.com/watch?v=${playableSource}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 text-xs text-(--accent)"><ExternalLink size={13}/> Abrir en YouTube</a>}
             </div>
           )}
-
-          {active.source_type === "youtube" && playableSource && (
-            <a
-              href={`https://www.youtube.com/watch?v=` + playableSource}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center
-                  justify-center gap-2
-                  text-xs text-(--accent)"
-            >
-              <ExternalLink size={13} />
-              Escuchar en YouTube
-            </a>
-          )}
+          <p className="text-xs text-center text-(--muted)">{activeIndex + 1} de {ordered.length}</p>
         </div>
       )}
 
@@ -642,7 +636,7 @@ export default function MusicPlayer({
                   className="text-xs
                   text-(--muted) wrap-break-word"
                 >
-                  {track.artist}
+                  {[track.artist, track.source_type === "youtube" ? "YouTube" : "MP3"].filter(Boolean).join(" · ")}
                 </p>
               </div>
             </button>

@@ -1033,3 +1033,48 @@ html.dark {
 .academy-notice-mark-one:hover { background:var(--card); }
 .academy-notice-toast { position:fixed; z-index:46; top:76px; right:16px; width:min(370px,calc(100vw - 32px)); padding:14px; display:flex; align-items:center; gap:12px; box-shadow:0 12px 30px #18101920; }
 @media (max-width:430px) { .academy-notice-bell { width:34px; height:34px; } }
+
+/* 1.2 — Orquídeas bajo la luna. Paletas independientes, sin cambiar el tema global. */
+.personal-profile {
+  --background: var(--gb-day-background, inherit);
+  --foreground: var(--gb-day-foreground, inherit);
+  --surface: var(--gb-day-surface, inherit);
+  --card: var(--gb-day-card, inherit);
+  --muted: var(--gb-day-muted, inherit);
+  --heading: var(--gb-day-heading, inherit);
+  --border: var(--gb-day-border, inherit);
+  --lavender: var(--gb-day-lavender, inherit);
+  --pink: var(--gb-day-pink, inherit);
+  --sage: var(--gb-day-sage, inherit);
+  --ivory: var(--gb-day-ivory, inherit);
+  --gold: var(--gb-day-gold, inherit);
+  --accent: var(--gb-day-accent, inherit);
+  --profile-accent: var(--gb-day-profile-accent, inherit);
+  color-scheme: var(--gb-day-scheme, light);
+}
+html.dark .personal-profile {
+  --background: var(--gb-night-background, inherit);
+  --foreground: var(--gb-night-foreground, inherit);
+  --surface: var(--gb-night-surface, inherit);
+  --card: var(--gb-night-card, inherit);
+  --muted: var(--gb-night-muted, inherit);
+  --heading: var(--gb-night-heading, inherit);
+  --border: var(--gb-night-border, inherit);
+  --lavender: var(--gb-night-lavender, inherit);
+  --pink: var(--gb-night-pink, inherit);
+  --sage: var(--gb-night-sage, inherit);
+  --ivory: var(--gb-night-ivory, inherit);
+  --gold: var(--gb-night-gold, inherit);
+  --accent: var(--gb-night-accent, inherit);
+  --profile-accent: var(--gb-night-profile-accent, inherit);
+  color-scheme: dark;
+}
+/* Both editors exist in the same form; only the current mode is displayed. */
+.profile-palette-night { display: none; }
+html.dark .profile-palette-day { display: none; }
+html.dark .profile-palette-night { display: block; }
+.profile-palette-day .profile-theme-option:focus-visible,
+.profile-palette-night .profile-theme-option:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 3px;
+}
