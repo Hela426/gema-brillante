@@ -15,16 +15,15 @@ export default function RelationshipList({
   relationships: Relationship[];
   characters: RelationshipCharacter[];
 }) {
+  const charactersById = new Map(
+    characters.map((character) => [character.id, character] as const),
+  );
+
   return (
     <div className="grid md:grid-cols-2 gap-5">
       {relationships.map((relation) => {
-        const a = characters.find(
-          (person) => person.id === relation.character_a_id,
-        );
-
-        const b = characters.find(
-          (person) => person.id === relation.character_b_id,
-        );
+        const a = charactersById.get(relation.character_a_id);
+        const b = charactersById.get(relation.character_b_id);
 
         const type = relationshipTypes[relation.relationship_type];
 

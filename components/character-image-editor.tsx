@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type PointerEvent } from "react";
+import Image from "next/image";
 import { ImagePlus, Move, RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
 import { FramedImage, useCharacterImageUrl } from "@/components/character-image";
 import { clamp, defaultFrame, frameFromPath, framingStyle, imageTypes, normalizeFrame, validateImage, type ImageDraft, type ImageFrame } from "@/lib/image-framing";
@@ -12,8 +13,11 @@ function useFileUrl(file: File | null) {
   useEffect(() => {
     if (!file) return;
     const url = URL.createObjectURL(file);
-    setEntry({ file, url });
-    return () => URL.revokeObjectURL(url);
+    const timer = window.setTimeout(() => setEntry({ file, url }), 0);
+    return () => {
+      window.clearTimeout(timer);
+      URL.revokeObjectURL(url);
+    };
   }, [file]);
   return entry?.file === file ? entry?.url || null : null;
 }
@@ -73,9 +77,18 @@ function FrameDialog({ kind, src, initial, onApply, onCancel }: {
             setFrame(f => ({ ...f, x: clamp(f.x + delta[0], 0, 100), y: clamp(f.y + delta[1], 0, 100) }));
           }}
           className={`relative overflow-hidden outline-2 outline-white/70 select-none touch-none ${dragging ? "cursor-grabbing" : "cursor-grab"} ${kind === "avatar" ? "w-full max-w-64 aspect-square rounded-full" : "w-full aspect-[3/1] rounded-lg"}`}>
-          {src && <img src={src} alt="Vista previa del encuadre" draggable={false}
+          {src && <Image
+            src={src}
+            alt="Vista previa del encuadre"
+            fill
+            unoptimized
+            sizes="(max-width: 640px) 80vw, 256px"
+            draggable={false}
             onLoad={e => setLoaded({ src, w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })}
-            onError={() => setBadSrc(src)} className="w-full h-full pointer-events-none" style={framingStyle(frame)} />}
+            onError={() => setBadSrc(src)}
+            className="pointer-events-none"
+            style={framingStyle(frame)}
+          />}
           {!ready && <div className="absolute inset-0 grid place-items-center text-white text-xs text-center p-3">{badSrc ? "No se pudo abrir la imagen." : "Cargando imagen…"}</div>}
         </div>
       </div>

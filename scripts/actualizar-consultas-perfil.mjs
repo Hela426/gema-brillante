@@ -1,5 +1,4 @@
-// Run from the project's root: node scripts/actualizar-consultas-perfil.mjs
-// Only modifies literal SELECT projections for character_customizations.
+// Actualización de consultas de personalización (ejecutar desde la raíz).
 import { readdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 const roots = ['app', 'components', 'lib', 'src/app', 'src/components', 'src/lib'].filter(existsSync);

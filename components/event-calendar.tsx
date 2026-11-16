@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -47,6 +47,40 @@ export default function EventCalendar({
   isMaster,
 }: Props) {
   const router = useRouter();
+
+  const charactersById = useMemo(
+    () => new Map(characters.map((character) => [character.id, character] as const)),
+    [characters],
+  );
+  const invitationsByEvent = useMemo(() => {
+    const grouped = new Map<string, EventInvitation[]>();
+    for (const invitation of invitations) {
+      const group = grouped.get(invitation.event_id);
+      if (group) group.push(invitation);
+      else grouped.set(invitation.event_id, [invitation]);
+    }
+    return grouped;
+  }, [invitations]);
+  const responsesByEvent = useMemo(() => {
+    const grouped = new Map<string, EventRsvp[]>();
+    for (const response of responses) {
+      const group = grouped.get(response.event_id);
+      if (group) group.push(response);
+      else grouped.set(response.event_id, [response]);
+    }
+    return grouped;
+  }, [responses]);
+
+  const eventsByDate = useMemo(() => {
+    const grouped = new Map<string, AcademyEvent[]>();
+    for (const event of events) {
+      const date = eventLocalValue(event.starts_at).slice(0, 10);
+      const group = grouped.get(date);
+      if (group) group.push(event);
+      else grouped.set(date, [event]);
+    }
+    return grouped;
+  }, [events]);
 
   const current = eventLocalValue(new Date().toISOString());
   const [year, setYear] = useState(Number(current.slice(0, 4)));
@@ -101,9 +135,7 @@ export default function EventCalendar({
   }
 
   function eventsForDay(date: string) {
-    return events.filter(
-      (event) => eventLocalValue(event.starts_at).slice(0, 10) === date,
-    );
+    return eventsByDate.get(date) ?? [];
   }
 
   function reset() {
@@ -468,18 +500,34 @@ export default function EventCalendar({
         )}
 
         {selectedEvents.map((event) => {
-          const invited = invitations.filter((i) => i.event_id === event.id);
-
-          const eligible = myCharacters.filter(
-            (c) =>
-              event.visibility === "public" ||
-              isMaster ||
-              invited.some((i) => i.character_id === c.id),
+          const invited = invitationsByEvent.get(event.id) ?? [];
+          const invitedCharacterIds = new Set(
+            invited.map((invitation) => invitation.character_id),
           );
 
-          const attendees = responses.filter((r) => r.event_id === event.id);
+          const eligible = myCharacters.filter(
+            (character) =>
+              event.visibility === "public" ||
+              isMaster ||
+              invitedCharacterIds.has(character.id),
+          );
 
-          const existingInvites = new Set(invited.map((i) => i.character_id));
+          const attendees = responsesByEvent.get(event.id) ?? [];
+          const responsesByCharacter = new Map<string, EventRsvp>();
+          const responseCounts: Record<EventRsvp["response"], number> = {
+            going: 0,
+            maybe: 0,
+            declined: 0,
+          };
+
+          for (const response of attendees) {
+            if (!responsesByCharacter.has(response.character_id)) {
+              responsesByCharacter.set(response.character_id, response);
+            }
+            responseCounts[response.response] += 1;
+          }
+
+          const existingInvites = invitedCharacterIds;
 
           return (
             <article key={event.id} className="academy-card overflow-hidden">
@@ -544,7 +592,7 @@ export default function EventCalendar({
                   ].map(([label, status]) => (
                     <div key={status} className="bg-(--surface) rounded-xl p-3">
                       <p className="text-2xl">
-                        {attendees.filter((r) => r.response === status).length}
+                        {responseCounts[status as EventRsvp["response"]]}
                       </p>
                       <p className="text-xs text-(--muted)">{label}</p>
                     </div>
@@ -553,9 +601,7 @@ export default function EventCalendar({
 
                 {event.published &&
                   eligible.map((person) => {
-                    const currentResponse = attendees.find(
-                      (r) => r.character_id === person.id,
-                    )?.response;
+                    const currentResponse = responsesByCharacter.get(person.id)?.response;
 
                     return (
                       <div
@@ -608,9 +654,7 @@ export default function EventCalendar({
 
                     <div className="flex gap-2 flex-wrap">
                       {invited.map((i) => {
-                        const person = characters.find(
-                          (c) => c.id === i.character_id,
-                        );
+                        const person = charactersById.get(i.character_id);
 
                         return (
                           <button

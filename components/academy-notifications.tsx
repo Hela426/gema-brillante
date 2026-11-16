@@ -70,7 +70,10 @@ export function useAcademyNotices(pathname: string) {
     }
   }, []);
 
-  useEffect(() => { void refresh(); }, [pathname, refresh]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void refresh(); }, 0);
+    return () => window.clearTimeout(timer);
+  }, [pathname, refresh]);
 
   useEffect(() => {
     const onFocus = () => { if (document.visibilityState === "visible") void refresh(); };

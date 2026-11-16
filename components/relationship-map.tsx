@@ -50,11 +50,33 @@ export default function RelationshipMap({
     };
   });
 
+  const nodesById = new Map(nodes.map((node) => [node.id, node] as const));
+  const nodeIds = new Set(nodesById.keys());
+
   const connections = visible.filter(
     (relation) =>
-      nodes.some((n) => n.id === relation.character_a_id) &&
-      nodes.some((n) => n.id === relation.character_b_id),
+      nodeIds.has(relation.character_a_id) &&
+      nodeIds.has(relation.character_b_id),
   );
+
+  const connectionsByPair = new Map<string, Relationship[]>();
+  for (const relation of connections) {
+    const pair = [relation.character_a_id, relation.character_b_id].sort();
+    const key = JSON.stringify(pair);
+    const siblings = connectionsByPair.get(key);
+    if (siblings) siblings.push(relation);
+    else connectionsByPair.set(key, [relation]);
+  }
+
+  const relationOffsets = new Map<string, number>();
+  for (const siblings of connectionsByPair.values()) {
+    siblings.forEach((relation, index) => {
+      relationOffsets.set(
+        relation.id,
+        (index - (siblings.length - 1) / 2) * 42,
+      );
+    });
+  }
 
   return (
     <section className="academy-card p-5">
@@ -94,21 +116,13 @@ export default function RelationshipMap({
             aria-label="Mapa de relaciones"
           >
             {connections.map((relation) => {
-              const a = nodes.find((n) => n.id === relation.character_a_id)!;
+              const a = nodesById.get(relation.character_a_id)!;
 
-              const b = nodes.find((n) => n.id === relation.character_b_id)!;
+              const b = nodesById.get(relation.character_b_id)!;
 
               const type = relationshipTypes[relation.relationship_type];
 
-              const siblings = connections.filter(
-                (r) =>
-                  (r.character_a_id === a.id && r.character_b_id === b.id) ||
-                  (r.character_a_id === b.id && r.character_b_id === a.id),
-              );
-
-              const index = siblings.findIndex((r) => r.id === relation.id);
-
-              const offset = (index - (siblings.length - 1) / 2) * 42;
+              const offset = relationOffsets.get(relation.id) ?? 0;
 
               const dx = b.x - a.x;
               const dy = b.y - a.y;

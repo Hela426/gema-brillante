@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import YouTubePlayer from "@/components/youtube-player";
@@ -211,7 +212,7 @@ export default function MusicPlayer({
 
       const supabase = createClient();
 
-      // Crea la playlist si todavía no existe.
+      // Inicialización de la lista de reproducción.
       const playlist = await supabase.from("character_music").upsert(
         {
           character_id: characterId,
@@ -242,8 +243,7 @@ export default function MusicPlayer({
             newPath = path;
           }
           if (!newPath) throw new Error("No se encuentra el archivo MP3.");
-          // Referencia HTTPS compatible con la validación anterior. No hace público el bucket.
-          // La reproducción usa exclusivamente una URL firmada solicitada con la sesión actual.
+          // Audio privado: reproducción mediante URL firmada de la sesión.
           validSource = supabase.storage.from(musicAudioBucket).getPublicUrl(newPath).data.publicUrl.replace("/object/public/", "/object/authenticated/");
         }
         if (!validSource) throw new Error("El origen de la canción no es válido.");
@@ -378,7 +378,7 @@ export default function MusicPlayer({
         </p>
       )}
 
-      {/* CONFIGURACIÓN */}
+      {/* ───── CONFIGURACIÓN ───── */}
 
       {canEdit && !compact && config && (
         <fieldset disabled={busy} className="music-editor space-y-4">
@@ -454,7 +454,7 @@ export default function MusicPlayer({
         </fieldset>
       )}
 
-      {/* EDITOR DE CANCIONES */}
+      {/* ───── EDITOR DE CANCIONES ───── */}
 
       {canEdit && !compact && editing && (
         <fieldset disabled={busy} className="music-editor space-y-4">
@@ -564,18 +564,21 @@ export default function MusicPlayer({
         </fieldset>
       )}
 
-      {/* REPRODUCTOR */}
+      {/* ───── REPRODUCTOR ───── */}
 
       {active && (
         <div className="personal-music-player space-y-5" data-player={style}>
           <div className="music-artwork">
-            <div className="music-artwork-inner">
+            <div className="music-artwork-inner relative">
               {coverUrl ? (
-                <img
+                <Image
                   src={coverUrl}
                   alt={`Portada de ${active.title}`}
+                  fill
+                  unoptimized
+                  sizes="(max-width: 640px) 180px, 260px"
                   referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover"
+                  className="object-cover"
                 />
               ) : (
                 <Disc3 size={46} strokeWidth={1.1} className="text-(--gold)" />
@@ -609,7 +612,7 @@ export default function MusicPlayer({
         </div>
       )}
 
-      {/* PLAYLIST */}
+      {/* ───── PLAYLIST ───── */}
 
       <details open={!compact} className="music-track-list">
         <summary className="cursor-pointer text-xs text-(--accent) mb-2">Lista de canciones ({ordered.length})</summary>

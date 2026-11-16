@@ -7,18 +7,6 @@ async function AcademyLayout({ children }: { children: ReactNode }) {
 
   const isMaster = profile.role === "master";
 
-  const { data: character, error: characterError } = await supabase
-    .from("characters")
-    .select("id, name, handle, avatar_url")
-    .eq("owner_id", user.id)
-    .eq("character_type", "main")
-    .eq("status", "approved")
-    .maybeSingle();
-
-  if (characterError) {
-    throw new Error(characterError.message);
-  }
-
   let query = supabase
     .from("characters")
     .select("id, name, handle, avatar_url")
@@ -28,7 +16,23 @@ async function AcademyLayout({ children }: { children: ReactNode }) {
     query = query.eq("status", "approved");
   }
 
-  const { data: characters, error } = await query;
+  // Consultas independientes de navegación.
+  const [mainResult, directoryResult] = await Promise.all([
+    supabase
+    .from("characters")
+    .select("id, name, handle, avatar_url")
+    .eq("owner_id", user.id)
+    .eq("character_type", "main")
+    .eq("status", "approved")
+    .maybeSingle(),
+    query,
+  ]);
+  const { data: character, error: characterError } = mainResult;
+  const { data: characters, error } = directoryResult;
+
+  if (characterError) {
+    throw new Error(characterError.message);
+  }
 
   if (error) {
     throw new Error(error.message);

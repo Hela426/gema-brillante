@@ -40,7 +40,7 @@ export default async function SocialPanel({
 
   const characters = (people.data || []) as SocialCharacter[];
 
-  // Colocar el personaje principal al inicio.
+  // Orden de personajes.
   const orderedCharacters = [...characters].sort(
     (a, b) => Number(b.id === character?.id) - Number(a.id === character?.id),
   );

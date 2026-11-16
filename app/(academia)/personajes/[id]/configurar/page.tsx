@@ -13,7 +13,6 @@ import { defaultCustomization, type Customization } from "@/lib/customization";
 import type { Personality } from "@/lib/personality";
 import type { MusicSettings, MusicTrack } from "@/lib/music";
 import type { Character } from "@/lib/characters";
-import "@/components/profile-redesign.css";
 
 type Props = { params: Promise<{ id: string }> };
 

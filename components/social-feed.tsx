@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -55,6 +55,37 @@ export default function SocialFeed({
 }: Props) {
   const router = useRouter();
 
+  const charactersById = useMemo(
+    () => new Map(characters.map((character) => [character.id, character] as const)),
+    [characters],
+  );
+  const commentsByPost = useMemo(() => {
+    const grouped = new Map<string, SocialComment[]>();
+    for (const comment of comments) {
+      const group = grouped.get(comment.post_id);
+      if (group) group.push(comment);
+      else grouped.set(comment.post_id, [comment]);
+    }
+    return grouped;
+  }, [comments]);
+  const likesByPost = useMemo(() => {
+    const grouped = new Map<string, SocialLike[]>();
+    for (const like of likes) {
+      const group = grouped.get(like.post_id);
+      if (group) group.push(like);
+      else grouped.set(like.post_id, [like]);
+    }
+    return grouped;
+  }, [likes]);
+  const likedPostIds = useMemo(
+    () => new Set(likes.filter((like) => like.user_id === userId).map((like) => like.post_id)),
+    [likes, userId],
+  );
+  const bookmarkedPostIds = useMemo(
+    () => new Set(bookmarks.filter((item) => item.user_id === userId).map((item) => item.post_id)),
+    [bookmarks, userId],
+  );
+
   const identities = characters.filter(
     (person) =>
       person.status === "approved" && (isMaster || person.owner_id === userId),
@@ -97,14 +128,11 @@ export default function SocialFeed({
       return "Rectoría de Gema Brillante";
     }
 
-    return (
-      characters.find((p) => p.id === characterId)?.name ||
-      "Personaje desconocido"
-    );
+    return charactersById.get(characterId)?.name || "Personaje desconocido";
   }
 
   function renderAvatar(characterId: string | null, small = false) {
-    const person = characters.find((p) => p.id === characterId);
+    const person = characterId ? charactersById.get(characterId) : undefined;
 
     const size = small ? "w-9 h-9" : "w-12 h-12";
 
@@ -225,9 +253,7 @@ export default function SocialFeed({
     await execute(async () => {
       const supabase = createClient();
 
-      const alreadyLiked = likes.some(
-        (like) => like.post_id === postId && like.user_id === userId,
-      );
+      const alreadyLiked = likedPostIds.has(postId);
 
       const result = alreadyLiked
         ? await supabase
@@ -250,9 +276,7 @@ export default function SocialFeed({
     await execute(async () => {
       const supabase = createClient();
 
-      const alreadySaved = bookmarks.some(
-        (item) => item.post_id === postId && item.user_id === userId,
-      );
+      const alreadySaved = bookmarkedPostIds.has(postId);
 
       const result = alreadySaved
         ? await supabase
@@ -496,21 +520,14 @@ export default function SocialFeed({
       </section>
 
       {posts.map((post) => {
-        const postLikes = likes.filter((like) => like.post_id === post.id);
-
-        const liked = postLikes.some((like) => like.user_id === userId);
-
-        const saved = bookmarks.some(
-          (item) => item.post_id === post.id && item.user_id === userId,
-        );
-
-        const postComments = comments.filter(
-          (item) => item.post_id === post.id,
-        );
+        const postLikes = likesByPost.get(post.id) ?? [];
+        const liked = likedPostIds.has(post.id);
+        const saved = bookmarkedPostIds.has(post.id);
+        const postComments = commentsByPost.get(post.id) ?? [];
 
         const canEdit = isMaster || post.author_id === userId;
 
-        const person = characters.find((p) => p.id === post.character_id);
+        const person = post.character_id ? charactersById.get(post.character_id) : undefined;
 
         return (
           <article key={post.id} className="academy-card p-5 space-y-4">

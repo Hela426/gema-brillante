@@ -367,7 +367,7 @@ export default function AcademyNavigation({
 
   return (
     <div className="min-h-screen">
-      {/* MENÚ DE ESCRITORIO */}
+      {/* ───── MENÚ DE ESCRITORIO ───── */}
 
       <aside
         className={`academy-sidebar hidden lg:flex fixed
@@ -381,7 +381,7 @@ export default function AcademyNavigation({
         {renderMenu(collapsed)}
       </aside>
 
-      {/* MENÚ PARA CELULARES */}
+      {/* ───── MENÚ PARA CELULARES ───── */}
 
       {mobileOpen && (
         <div className="lg:hidden fixed inset-0 z-50">
@@ -409,7 +409,7 @@ export default function AcademyNavigation({
         </div>
       )}
 
-      {/* CONTENIDO PRINCIPAL */}
+      {/* ───── CONTENIDO PRINCIPAL ───── */}
 
       <div
         className={`min-w-0 transition-[margin]
@@ -506,7 +506,7 @@ export default function AcademyNavigation({
         {children}
       </div>
 
-      {/* BUSCADOR RÁPIDO */}
+      {/* ───── BUSCADOR RÁPIDO ───── */}
 
       {searchOpen && (
         <div

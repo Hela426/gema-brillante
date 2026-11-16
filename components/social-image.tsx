@@ -71,6 +71,7 @@ export default function SocialImage({ path }: { path: string }) {
         src={result.url}
         alt="Fotografía de la publicación"
         loading="lazy"
+        decoding="async"
         className="w-full max-h-/[650px]
           object-contain rounded-2xl
           bg-(--surface)"

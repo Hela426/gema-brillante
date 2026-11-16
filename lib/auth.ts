@@ -17,7 +17,7 @@ export async function requireProfile() {
 
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("*")
+    .select("id, username, role")
     .eq("id", user.id)
     .single();
 
@@ -47,7 +47,7 @@ export async function requireCharacter() {
 
   const { data: character, error } = await result.supabase
     .from("characters")
-    .select("*")
+    .select("id, name, handle, avatar_url")
     .eq("owner_id", result.user.id)
     .eq("character_type", "main")
     .eq("status", "approved")

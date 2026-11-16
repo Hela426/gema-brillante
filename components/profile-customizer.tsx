@@ -138,7 +138,7 @@ export default function ProfileCustomizer({
         className="grid xl:grid-cols-2 gap-6
         items-start"
       >
-        {/* EDITOR */}
+        {/* ───── EDITOR ───── */}
 
         <section className="academy-card p-5 space-y-6">
           <h2 className="text-3xl flex items-center gap-3">
@@ -439,7 +439,7 @@ export default function ProfileCustomizer({
           </fieldset>
         </section>
 
-        {/* VISTA PREVIA */}
+        {/* ───── VISTA PREVIA ───── */}
 
         <section
           className="space-y-3

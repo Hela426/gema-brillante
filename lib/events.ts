@@ -51,9 +51,7 @@ export const eventColors: Record<EventCategory, string> = {
   other: "#ECE9EF",
 };
 
-// La campaña utiliza el horario de Colombia (UTC-5).
-// Convertimos fechas sin depender de la zona horaria
-// configurada en el computador del jugador.
+// Horario de campaña: Colombia (UTC-5), independiente del dispositivo.
 export function eventLocalValue(iso: string) {
   return new Date(
     new Date(iso).getTime() - 5 * 60 * 60 * 1000

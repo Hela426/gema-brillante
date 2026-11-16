@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -24,6 +24,20 @@ export default function DesireManager({
   isMaster: boolean;
 }) {
   const router = useRouter();
+
+  const assignmentsByCardId = useMemo(() => {
+    const indexed = new Map<string, DesireAssignment>();
+    for (const assignment of assignments) {
+      if (!indexed.has(assignment.card_id)) {
+        indexed.set(assignment.card_id, assignment);
+      }
+    }
+    return indexed;
+  }, [assignments]);
+  const charactersById = useMemo(
+    () => new Map(characters.map((character) => [character.id, character] as const)),
+    [characters],
+  );
 
   const [title, setTitle] = useState("");
   const [quote, setQuote] = useState("");
@@ -243,11 +257,11 @@ export default function DesireManager({
 
       <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-6">
         {cards.map((card) => {
-          const assignment = assignments.find((a) => a.card_id === card.id);
+          const assignment = assignmentsByCardId.get(card.id);
 
-          const owner = characters.find(
-            (person) => person.id === assignment?.character_id,
-          );
+          const owner = assignment
+            ? charactersById.get(assignment.character_id)
+            : undefined;
 
           const opened = isMaster || revealed[card.id];
 

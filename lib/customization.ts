@@ -224,7 +224,7 @@ export const nightProfileThemes = {
 
 export type NightProfileTheme = keyof typeof nightProfileThemes;
 
-// Null inherits the night version of the current daytime palette.
+// null hereda la variante nocturna de la paleta diurna.
 export function resolveNightTheme(settings: Pick<Customization, "theme" | "night_theme">): NightProfileTheme {
   const preferred = settings.night_theme ?? settings.theme;
   return Object.prototype.hasOwnProperty.call(nightProfileThemes, preferred)

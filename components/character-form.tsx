@@ -193,7 +193,7 @@ export default function CharacterForm({
   return (
     <form onSubmit={saveCharacter} className="space-y-6">
       <fieldset disabled={loading} className="space-y-6">
-        {/* IMÁGENES */}
+        {/* ───── IMÁGENES ───── */}
 
         <section className="academy-card overflow-hidden p-6 space-y-6">
           <CharacterImageEditor kind="cover" path={character?.cover_url} draft={cover} onChange={setCover} />
@@ -202,7 +202,7 @@ export default function CharacterForm({
           </div>
         </section>
 
-        {/* IDENTIDAD */}
+        {/* ───── IDENTIDAD ───── */}
 
         <section className="academy-card p-6">
           <h2 className="text-3xl flex items-center gap-3">
@@ -220,7 +220,7 @@ export default function CharacterForm({
           </div>
         </section>
 
-        {/* LINAJE */}
+        {/* ───── LINAJE ───── */}
 
         <section className="academy-card p-6">
           <h2 className="text-3xl flex items-center gap-3">
@@ -264,7 +264,7 @@ export default function CharacterForm({
           </div>
         </section>
 
-        {/* HISTORIA */}
+        {/* ───── HISTORIA ───── */}
 
         <section className="academy-card p-6">
           <h2 className="text-3xl flex items-center gap-3">
@@ -284,7 +284,7 @@ export default function CharacterForm({
           </div>
         </section>
 
-        {/* HABILIDADES */}
+        {/* ───── HABILIDADES ───── */}
 
         <section className="academy-card p-6">
           <h2 className="text-3xl flex items-center gap-3">
@@ -298,7 +298,7 @@ export default function CharacterForm({
           </div>
         </section>
 
-        {/* PERSONALIZACIÓN */}
+        {/* ───── PERSONALIZACIÓN ───── */}
 
         <section className="academy-card p-6">
           <h2 className="text-3xl flex items-center gap-3">

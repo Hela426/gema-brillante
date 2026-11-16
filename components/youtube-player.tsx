@@ -24,7 +24,10 @@ export default function YouTubePlayer({
   const [error, setError] = useState("");
 
   useEffect(() => {
-    setOrigin(window.location.origin);
+    const frame = window.requestAnimationFrame(() => {
+      setOrigin(window.location.origin);
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, []);
 
   useEffect(() => {

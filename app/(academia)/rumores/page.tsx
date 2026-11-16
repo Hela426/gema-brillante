@@ -11,32 +11,25 @@ async function RumorsPage() {
 
   const isMaster = profile.role === "master";
 
-  const [rumors, people] = await Promise.all([
-    supabase.rpc("list_academy_rumors"),
+  const walletsRequest = isMaster
+    ? supabase.from("token_wallets").select("id, label").order("label")
+    : Promise.resolve({ data: [] as RumorWallet[], error: null });
 
+  const [rumors, people, walletsResult] = await Promise.all([
+    supabase.rpc("list_academy_rumors"),
     supabase
       .from("characters")
       .select("id, name, owner_id")
       .eq("status", "approved")
       .order("name"),
+    walletsRequest,
   ]);
 
-  const error = rumors.error || people.error;
+  const error = rumors.error || people.error || walletsResult.error;
 
   if (error) throw new Error(error.message);
 
-  let wallets: RumorWallet[] = [];
-
-  if (isMaster) {
-    const { data, error } = await supabase
-      .from("token_wallets")
-      .select("id, label")
-      .order("label");
-
-    if (error) throw new Error(error.message);
-
-    wallets = (data || []) as RumorWallet[];
-  }
+  const wallets = (walletsResult.data || []) as RumorWallet[];
 
   const characters = [...((people.data || []) as RumorCharacter[])].sort(
     (a, b) => Number(b.id === character?.id) - Number(a.id === character?.id),

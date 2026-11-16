@@ -33,8 +33,7 @@ export default function PersonalProfile({
   const night = nightProfileThemes[resolveNightTheme(settings)];
   const flower = profileFlowers[settings.flower] || profileFlowers.orchid;
 
-  // Supply both palettes on the server. CSS reacts to html.dark without a
-  // client fetch, hydration mismatch, remount or restarting the music player.
+  // Paletas del servidor: CSS cambia el tema sin reiniciar el reproductor.
   function paletteVariables(
     mode: "day" | "night",
     theme: typeof day | typeof night,

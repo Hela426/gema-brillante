@@ -16,24 +16,33 @@ import {
 async function MasterDashboard() {
   const { supabase, profile } = await requireMaster();
 
-  const [users, characters, pending, secrets] = await Promise.all([
-    supabase.from("profiles").select("*", { count: "exact", head: true }),
+  const [users, characters, pending, secrets, members] = await Promise.all([
+    supabase.from("profiles").select("id", { count: "exact", head: true }),
 
-    supabase.from("characters").select("*", { count: "exact", head: true }),
+    supabase.from("characters").select("id", { count: "exact", head: true }),
 
     supabase
       .from("characters")
-      .select("*", { count: "exact", head: true })
+      .select("id", { count: "exact", head: true })
       .eq("character_type", "npc")
       .eq("status", "pending"),
 
     supabase
       .from("character_secrets")
-      .select("*", { count: "exact", head: true }),
+      .select("id", { count: "exact", head: true }),
+
+    supabase
+      .from("profiles")
+      .select("id, username, role, created_at")
+      .order("created_at", { ascending: true }),
   ]);
 
   if ([users, characters, pending, secrets].some((result) => result.error)) {
     throw new Error("No se pudo cargar Rectoría.");
+  }
+
+  if (members.error) {
+    throw new Error("No se pudieron cargar los usuarios.");
   }
 
   const stats = [
@@ -62,15 +71,6 @@ async function MasterDashboard() {
       color: "var(--sage)",
     },
   ];
-
-  const { data: members, error } = await supabase
-    .from("profiles")
-    .select("id, username, role, created_at")
-    .order("created_at", { ascending: true });
-
-  if (error) {
-    throw new Error("No se pudieron cargar los usuarios.");
-  }
 
   return (
     <main className="min-h-screen p-5 md:p-10">
@@ -170,7 +170,7 @@ async function MasterDashboard() {
           </p>
 
           <div className="mt-5 divide-y divide-(--border)">
-            {members?.map((member) => (
+            {members.data?.map((member) => (
               <div
                 key={member.id}
                 className="flex items-center

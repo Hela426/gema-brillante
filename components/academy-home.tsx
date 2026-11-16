@@ -22,7 +22,7 @@ export default function HomePage({
   socialFeed,
 }: {
   isMaster?: boolean;
-  character?: Character | null;
+  character?: Pick<Character, "id" | "name" | "handle" | "avatar_url"> | null;
   campaignTitle?: string;
   upcomingEvents?: HomeEvent[];
   socialFeed?: ReactNode;
@@ -34,7 +34,7 @@ export default function HomePage({
           className="max-w-[1500px] mx-auto
           p-4 md:p-8 pb-28 lg:pb-8"
         >
-          {/* PORTADA */}
+          {/* ───── PORTADA ───── */}
 
           <section
             className="academy-banner
@@ -69,7 +69,7 @@ export default function HomePage({
             </div>
           </section>
 
-          {/* BIENVENIDA */}
+          {/* ───── BIENVENIDA ───── */}
 
           <section className="mt-8">
             <h2 className="text-4xl font-semibold">Bienvenido a la academia</h2>
@@ -84,7 +84,7 @@ export default function HomePage({
             className="grid grid-cols-1 xl:grid-cols-3
             gap-6 mt-8"
           >
-            {/* PUBLICACIONES REALES */}
+            {/* ───── PUBLICACIONES REALES ───── */}
 
             <section className="min-w-0 xl:col-span-2 space-y-5">
               <div className="flex items-center justify-between gap-3">
@@ -96,7 +96,7 @@ export default function HomePage({
               {socialFeed}
             </section>
 
-            {/* COLUMNA DERECHA */}
+            {/* ───── COLUMNA DERECHA ───── */}
 
             <aside className="space-y-5">
               <article className="academy-card p-5">

@@ -172,7 +172,7 @@ export default function PersonalityWidgets({
         </p>
       )}
 
-      {/* EDITOR */}
+      {/* ───── EDITOR ───── */}
 
       {canEdit && editing && (
         <div className="academy-card p-5 space-y-5">
@@ -349,7 +349,7 @@ export default function PersonalityWidgets({
         <p className="text-xs text-(--muted)">Vista previa de tus widgets</p>
       )}
 
-      {/* ESTADO PERSONAL */}
+      {/* ───── ESTADO PERSONAL ───── */}
 
       {current.show_status &&
         (current.status_text || current.mood !== "none") && (
@@ -378,7 +378,7 @@ export default function PersonalityWidgets({
           </article>
         )}
 
-      {/* GUSTOS Y AFICIONES */}
+      {/* ───── GUSTOS Y AFICIONES ───── */}
 
       <div className="grid sm:grid-cols-2 gap-4">
         {personalityFields.map((field) => {
@@ -417,7 +417,7 @@ export default function PersonalityWidgets({
         })}
       </div>
 
-      {/* CITA PERSONAL */}
+      {/* ───── CITA PERSONAL ───── */}
 
       {current.show_quote && current.favorite_quote.trim() && (
         <blockquote

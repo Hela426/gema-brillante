@@ -22,15 +22,12 @@ import {
   Newspaper,
   Feather,
   Gem,
-  Eye,
   Crown,
   LockKeyhole,
   Megaphone,
   Pin,
   Search,
   X,
-  Check,
-  Archive,
   TrendingDown,
 } from "lucide-react";
 
@@ -217,7 +214,7 @@ export default function RumorManager({
     await act(id, "spread", "El rumor ahora tiene una ficha de resolución.");
   }
 
-  async function useToken(id: string) {
+  async function applyRumorToken(id: string) {
     if (!reason.trim()) {
       setError("Describe el efecto narrativo.");
       return;
@@ -676,7 +673,7 @@ export default function RumorManager({
                     <button
                       disabled={busy}
                       className="academy-button"
-                      onClick={() => useToken(rumor.id)}
+                      onClick={() => applyRumorToken(rumor.id)}
                     >
                       Confirmar utilización
                     </button>

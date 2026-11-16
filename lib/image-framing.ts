@@ -15,8 +15,7 @@ export function normalizeFrame(frame: ImageFrame): ImageFrame {
   };
 }
 
-// El encuadre forma parte del nombre real del objeto, no de una URL con parámetros.
-// Así los consumidores que solo reciben avatar_url/cover_url no necesitan otra consulta.
+// El nombre del archivo almacena el encuadre sin consultas adicionales.
 export function frameFromPath(path?: string | null): ImageFrame {
   const match = path?.match(/-f(\d{1,5})-(\d{1,5})-(\d{1,3})\.(?:jpg|jpeg|png|webp|gif)$/i);
   return match ? normalizeFrame({ x: Number(match[1]) / 100, y: Number(match[2]) / 100, zoom: Number(match[3]) / 100 }) : { ...defaultFrame };

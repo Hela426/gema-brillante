@@ -3,7 +3,6 @@ import ProfileTabs, { ProfileTabLink } from "@/components/profile-tabs";
 import GalleryManager from "@/components/gallery-manager";
 import GalleryImage from "@/components/gallery-image";
 import type { GalleryAlbum, GalleryPhoto } from "@/lib/gallery";
-import "@/components/profile-redesign.css";
 import { notFound } from "next/navigation";
 import { requireCharacter } from "@/lib/auth";
 import CharacterImage from "@/components/character-image";
@@ -47,7 +46,14 @@ async function CharacterProfile({ params }: Props) {
 
   const { data, error } = await supabase
     .from("characters")
-    .select("*")
+    .select(`
+      id, owner_id, name, handle, character_type, status,
+      age, pronouns, race, kingdom, lineage, academic_year,
+      appearance, temperament, character_role, family_background,
+      biography, magic, combat_skills, avatar_url, cover_url,
+      favorite_quote, positive_reputation, negative_reputation,
+      theme_color, created_at
+    `)
     .eq("id", id)
     .maybeSingle();
 
@@ -58,67 +64,98 @@ async function CharacterProfile({ params }: Props) {
   if (!data) notFound();
 
   const person = data as Character;
-  // Se consulta el personaje visitado, no el rango del visitante.
-  const { data: rectoryFlag, error: rectoryError } = await supabase.rpc(
-    "is_rectory_character", { p_character: person.id },
-  );
-  if (rectoryError) throw new Error(rectoryError.message);
-  const isRectory = rectoryFlag === true;
 
-  const canEdit = person.owner_id === user.id || profile.role === "master";
-
-  const { data: personality, error: personalityError } = await supabase.rpc(
-    "get_character_personality",
-    {
-      p_character: person.id,
-    },
-  );
-
-  if (personalityError) {
-    throw new Error(personalityError.message);
-  }
-
-  const [music, musicTracks] = await Promise.all([
+  // Consultas independientes: todas conservan la sesión y las políticas RLS del visitante.
+  const [
+    rectoryResult,
+    personalityResult,
+    musicResult,
+    musicTracksResult,
+    secretsResult,
+    relationsResult,
+    customizationResult,
+    albumsResult,
+    photosResult,
+    notesResult,
+  ] = await Promise.all([
+    supabase.rpc("is_rectory_character", { p_character: person.id }),
+    supabase.rpc("get_character_personality", { p_character: person.id }),
     supabase
       .from("character_music")
       .select("playlist_name, player_style, visible")
       .eq("character_id", person.id)
       .maybeSingle(),
-
     supabase
       .from("character_tracks")
-      .select("*")
+      .select("id, character_id, title, artist, source_type, source, audio_path, cover_url, position, created_at")
       .eq("character_id", person.id)
       .order("position", { ascending: true }),
+    supabase
+      .from("character_secrets")
+      .select("id, title, content, category")
+      .eq("character_id", person.id),
+    supabase
+      .from("character_relationships")
+      .select("id, character_a_id, character_b_id, title, relationship_type, description, visibility, created_at")
+      .or(`character_a_id.eq.${person.id},character_b_id.eq.${person.id}`),
+    supabase
+      .from("character_customizations")
+      .select(`
+        theme, avatar_frame, decoration, card_style, background_pattern,
+        accent_color, subtitle, welcome_message, flower, ambient_effect,
+        effect_density, night_theme, night_accent_color
+      `)
+      .eq("character_id", person.id)
+      .maybeSingle(),
+    supabase
+      .from("character_albums")
+      .select("id, character_id, title, description, visibility, created_at")
+      .eq("character_id", id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("character_photos")
+      .select("id, character_id, album_id, image_path, title, description, visibility, favorite, created_at")
+      .eq("character_id", id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("journal_entries")
+      .select("id, title, content, created_at, visibility")
+      .eq("character_id", id)
+      .order("created_at", { ascending: false })
+      .limit(20),
   ]);
 
-  if (music.error) {
-    throw new Error(music.error.message);
-  }
+  const requestError =
+    rectoryResult.error ||
+    personalityResult.error ||
+    musicResult.error ||
+    musicTracksResult.error ||
+    secretsResult.error ||
+    relationsResult.error ||
+    customizationResult.error ||
+    albumsResult.error ||
+    photosResult.error ||
+    notesResult.error;
 
-  if (musicTracks.error) {
-    throw new Error(musicTracks.error.message);
-  }
+  if (requestError) throw new Error(requestError.message);
 
-  const { data: secrets, error: secretError } = await supabase
-    .from("character_secrets")
-    .select("id, title, content, category")
-    .eq("character_id", person.id);
-
-  if (secretError) {
-    throw new Error(secretError.message);
-  }
-
-  const { data: relations, error: relationError } = await supabase
-    .from("character_relationships")
-    .select("*")
-    .or(`character_a_id.eq.${person.id},character_b_id.eq.${person.id}`);
-
-  if (relationError) {
-    throw new Error(relationError.message);
-  }
-
-  const relationships = (relations || []) as Relationship[];
+  const isRectory = rectoryResult.data === true;
+  const canEdit = person.owner_id === user.id || profile.role === "master";
+  const personality = personalityResult.data;
+  const music = musicResult;
+  const musicTracks = musicTracksResult;
+  const secrets = secretsResult.data;
+  const relationships = (relationsResult.data || []) as Relationship[];
+  const customization = customizationResult.data;
+  const albums = (albumsResult.data || []) as GalleryAlbum[];
+  const photos = (photosResult.data || []) as GalleryPhoto[];
+  const notes = (notesResult.data || []) as {
+    id: string;
+    title: string;
+    content: string;
+    created_at: string;
+    visibility: string;
+  }[];
 
   const relatedIds = [
     ...new Set(
@@ -132,62 +169,31 @@ async function CharacterProfile({ params }: Props) {
   let relatedPeople: RelationshipCharacter[] = [];
 
   if (relatedIds.length > 0) {
-    const { data, error } = await supabase
+    const { data: people, error: peopleError } = await supabase
       .from("characters")
       .select("id, name, owner_id, avatar_url")
       .in("id", relatedIds);
 
-    if (error) throw new Error(error.message);
-
-    relatedPeople = (data || []) as RelationshipCharacter[];
-  }
-
-  const { data: customization, error: customizationError } = await supabase
-    .from("character_customizations")
-    .select(
-      `
-        theme,
-        avatar_frame,
-        decoration,
-        card_style,
-        background_pattern,
-        accent_color,
-        subtitle,
-        welcome_message,
-        flower,
-        ambient_effect,
-        effect_density, night_theme, night_accent_color
-      `,
-    )
-    .eq("character_id", person.id)
-    .maybeSingle();
-
-  if (customizationError) {
-    throw new Error(customizationError.message);
+    if (peopleError) throw new Error(peopleError.message);
+    relatedPeople = (people || []) as RelationshipCharacter[];
   }
 
   const profileSettings =
     (customization as Customization | null) || defaultCustomization;
 
-  // Las consultas usan la sesión del visitante y las políticas RLS existentes.
-  const [albumsResult, photosResult, notesResult] = await Promise.all([
-    supabase.from("character_albums").select("*")
-      .eq("character_id", id).order("created_at", { ascending: false }),
-    supabase.from("character_photos").select("*")
-      .eq("character_id", id).order("created_at", { ascending: false }),
-    supabase.from("journal_entries").select("id, title, content, created_at, visibility")
-      .eq("character_id", id).order("created_at", { ascending: false }).limit(20),
-  ]);
-  const galleryError = albumsResult.error || photosResult.error || notesResult.error;
-  if (galleryError) throw new Error(galleryError.message);
-  const albums = (albumsResult.data || []) as GalleryAlbum[];
-  const photos = (photosResult.data || []) as GalleryPhoto[];
-  const notes = (notesResult.data || []) as {
-    id: string; title: string; content: string; created_at: string; visibility: string;
-  }[];
-  const thumbnails = photos.filter(photo => photo.visibility === "public" &&
-    (!photo.album_id || albums.some(album => album.id === photo.album_id && album.visibility === "public"))
-  ).slice(0, 6);
+  // Solo se muestran miniaturas públicas, incluidas las protegidas por álbum privado.
+  const publicAlbumIds = new Set(
+    albums
+      .filter((album) => album.visibility === "public")
+      .map((album) => album.id),
+  );
+  const thumbnails = photos
+    .filter(
+      (photo) =>
+        photo.visibility === "public" &&
+        (!photo.album_id || publicAlbumIds.has(photo.album_id)),
+    )
+    .slice(0, 6);
 
   const information = [
     ["Edad", person.age?.toString()],
@@ -224,7 +230,7 @@ async function CharacterProfile({ params }: Props) {
           hideActions
           introPlacement="inline"
         >
-          {/* PORTADA Y AVATAR */}
+          {/* ───── PORTADA Y AVATAR ───── */}
 
           <section className="academy-card overflow-hidden relative">
             {canEdit && (

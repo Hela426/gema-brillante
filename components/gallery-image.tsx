@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { ImageOff } from "lucide-react";
 
@@ -65,6 +66,17 @@ export default function GalleryImage({
   }
 
   return (
-    <img src={result.url} alt={alt} loading="lazy" className={className} />
+    <div className={`relative overflow-hidden ${className}`}>
+      <Image
+        src={result.url}
+        alt={alt}
+        fill
+        unoptimized
+        sizes="(max-width: 640px) 33vw, 16vw"
+        loading="lazy"
+        decoding="async"
+        className="object-cover"
+      />
+    </div>
   );
 }

@@ -16,7 +16,6 @@ import {
 import { socialDate } from "@/lib/social";
 
 import {
-  Hourglass,
   Crown,
   BookOpen,
   ArrowRight,

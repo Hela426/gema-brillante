@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -41,6 +41,15 @@ export default function JournalManager({
   initialCharacterId?: string;
 }) {
   const router = useRouter();
+
+  const charactersById = useMemo(
+    () => new Map(characters.map((character) => [character.id, character] as const)),
+    [characters],
+  );
+  const sessionsById = useMemo(
+    () => new Map(sessions.map((session) => [session.id, session] as const)),
+    [sessions],
+  );
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -188,7 +197,9 @@ export default function JournalManager({
   }
 
   const visible = entries.filter((note) => {
-    const person = characters.find((p) => p.id === note.character_id);
+    const person = note.character_id
+      ? charactersById.get(note.character_id)
+      : undefined;
 
     const searchable = [note.title, note.content, person?.name || ""]
       .join(" ")
@@ -443,9 +454,13 @@ export default function JournalManager({
             isMaster ||
             (note.author_id === userId && note.visibility === "private");
 
-          const person = characters.find((p) => p.id === note.character_id);
+          const person = note.character_id
+      ? charactersById.get(note.character_id)
+      : undefined;
 
-          const session = sessions.find((s) => s.id === note.session_id);
+          const session = note.session_id
+            ? sessionsById.get(note.session_id)
+            : undefined;
 
           return (
             <article
